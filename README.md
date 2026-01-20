@@ -1,20 +1,12 @@
-# OpenAI-Compatible Edge-TTS API 🗣️
+# OpenAI-Compatible Edge-TTS
 
-![GitHub stars](https://img.shields.io/github/stars/travisvn/openai-edge-tts?style=social)
-![GitHub forks](https://img.shields.io/github/forks/travisvn/openai-edge-tts?style=social)
-![GitHub repo size](https://img.shields.io/github/repo-size/travisvn/openai-edge-tts)
-![GitHub top language](https://img.shields.io/github/languages/top/travisvn/openai-edge-tts)
-![GitHub last commit](https://img.shields.io/github/last-commit/travisvn/openai-edge-tts?color=red)
-[![Discord](https://img.shields.io/badge/Discord-Voice_AI_%26_TTS_Tools-blue?logo=discord&logoColor=white)](https://discord.gg/GkFbBCBqJ6)
-[![LinkedIn](https://img.shields.io/badge/Connect_on_LinkedIn-%230077B5.svg?logo=linkedin&logoColor=white)](https://linkedin.com/in/travisvannimwegen)
+## Forked from [travisvn/openai-edge-tts](https://github.com/travisvn/openai-edge-tts)
 
 This project provides a local, OpenAI-compatible text-to-speech (TTS) API using `edge-tts`. It emulates the OpenAI TTS endpoint (`/v1/audio/speech`), enabling users to generate speech from text with various voice options and playback speeds, just like the OpenAI API.
 
 `edge-tts` uses Microsoft Edge's online text-to-speech service, so it is completely free.
 
 [View this project on Docker Hub](https://hub.docker.com/r/travisvn/openai-edge-tts)
-
-# Please ⭐️ star this repo if you find it helpful
 
 ## Features
 
@@ -329,16 +321,16 @@ Example using fetch API for SSE streaming:
 
 ```javascript
 async function streamTTSWithSSE(text) {
-  const response = await fetch('http://localhost:5050/v1/audio/speech', {
-    method: 'POST',
+  const response = await fetch("http://localhost:5050/v1/audio/speech", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer your_api_key_here',
+      "Content-Type": "application/json",
+      Authorization: "Bearer your_api_key_here",
     },
     body: JSON.stringify({
       input: text,
-      voice: 'alloy',
-      stream_format: 'sse',
+      voice: "alloy",
+      stream_format: "sse",
     }),
   });
 
@@ -351,13 +343,13 @@ async function streamTTSWithSSE(text) {
     if (done) break;
 
     const chunk = decoder.decode(value);
-    const lines = chunk.split('\n');
+    const lines = chunk.split("\n");
 
     for (const line of lines) {
-      if (line.startsWith('data: ')) {
+      if (line.startsWith("data: ")) {
         const data = JSON.parse(line.slice(6));
 
-        if (data.type === 'speech.audio.delta') {
+        if (data.type === "speech.audio.delta") {
           // Decode base64 audio chunk
           const audioData = atob(data.audio);
           const audioArray = new Uint8Array(audioData.length);
@@ -365,8 +357,8 @@ async function streamTTSWithSSE(text) {
             audioArray[i] = audioData.charCodeAt(i);
           }
           audioChunks.push(audioArray);
-        } else if (data.type === 'speech.audio.done') {
-          console.log('Speech synthesis complete:', data.usage);
+        } else if (data.type === "speech.audio.done") {
+          console.log("Speech synthesis complete:", data.usage);
 
           // Combine all chunks and play
           const totalLength = audioChunks.reduce(
@@ -380,7 +372,7 @@ async function streamTTSWithSSE(text) {
             offset += chunk.length;
           }
 
-          const audioBlob = new Blob([combinedArray], { type: 'audio/mpeg' });
+          const audioBlob = new Blob([combinedArray], { type: "audio/mpeg" });
           const audioUrl = URL.createObjectURL(audioBlob);
           const audio = new Audio(audioUrl);
           audio.play();
@@ -392,7 +384,7 @@ async function streamTTSWithSSE(text) {
 }
 
 // Usage
-streamTTSWithSSE('Hello from SSE streaming!');
+streamTTSWithSSE("Hello from SSE streaming!");
 ```
 
 #### International Language Example
@@ -417,16 +409,16 @@ Example using fetch API for SSE streaming:
 
 ```javascript
 async function streamTTSWithSSE(text) {
-  const response = await fetch('http://localhost:5050/v1/audio/speech', {
-    method: 'POST',
+  const response = await fetch("http://localhost:5050/v1/audio/speech", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer your_api_key_here',
+      "Content-Type": "application/json",
+      Authorization: "Bearer your_api_key_here",
     },
     body: JSON.stringify({
       input: text,
-      voice: 'alloy',
-      stream_format: 'sse',
+      voice: "alloy",
+      stream_format: "sse",
     }),
   });
 
@@ -439,13 +431,13 @@ async function streamTTSWithSSE(text) {
     if (done) break;
 
     const chunk = decoder.decode(value);
-    const lines = chunk.split('\n');
+    const lines = chunk.split("\n");
 
     for (const line of lines) {
-      if (line.startsWith('data: ')) {
+      if (line.startsWith("data: ")) {
         const data = JSON.parse(line.slice(6));
 
-        if (data.type === 'speech.audio.delta') {
+        if (data.type === "speech.audio.delta") {
           // Decode base64 audio chunk
           const audioData = atob(data.audio);
           const audioArray = new Uint8Array(audioData.length);
@@ -453,8 +445,8 @@ async function streamTTSWithSSE(text) {
             audioArray[i] = audioData.charCodeAt(i);
           }
           audioChunks.push(audioArray);
-        } else if (data.type === 'speech.audio.done') {
-          console.log('Speech synthesis complete:', data.usage);
+        } else if (data.type === "speech.audio.done") {
+          console.log("Speech synthesis complete:", data.usage);
 
           // Combine all chunks and play
           const totalLength = audioChunks.reduce(
@@ -468,7 +460,7 @@ async function streamTTSWithSSE(text) {
             offset += chunk.length;
           }
 
-          const audioBlob = new Blob([combinedArray], { type: 'audio/mpeg' });
+          const audioBlob = new Blob([combinedArray], { type: "audio/mpeg" });
           const audioUrl = URL.createObjectURL(audioBlob);
           const audio = new Audio(audioUrl);
           audio.play();
@@ -480,7 +472,7 @@ async function streamTTSWithSSE(text) {
 }
 
 // Usage
-streamTTSWithSSE('Hello from SSE streaming!');
+streamTTSWithSSE("Hello from SSE streaming!");
 ```
 
 #### Additional Endpoints
