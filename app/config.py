@@ -16,4 +16,7 @@ DEFAULT_CONFIGS = {
     "REMOVE_FILTER": False,
     "EXPAND_API": True,
     "DETAILED_ERROR_LOGGING": True,
-} 
+    "TTS_WORKERS": 8,
+    "TTS_REQUEST_TIMEOUT": 120,
+    "TTS_MAX_RETRIES": 2,
+}

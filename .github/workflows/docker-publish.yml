@@ -2,48 +2,119 @@ name: Docker Image CI
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: [main, master]
+    tags: ['v*']
   pull_request:
-    branches: ["main", "master"]
+    branches: [main, master]
+  workflow_dispatch:
+  schedule:
+    - cron: '5 6 * * *'
+
+permissions:
+  contents: read
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pip check
+      - run: python -m unittest discover -s tests -v
+
   build-and-push:
+    needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v7.0.1
+      - uses: docker/setup-buildx-action@v4.4.1
+      - name: Build image for live checks
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          load: true
+          tags: edge-tts:check
+          build-args: INSTALL_FFMPEG=true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Test real speech, formats, aliases, and concurrent clients
+        run: |
+          docker run -d --name edge-tts-smoke -p 127.0.0.1:5050:5050 -e API_KEY=release-smoke-test edge-tts:check
+          docker run --rm --network host --mount type=bind,source="$PWD/tests",target=/tests,readonly --entrypoint python edge-tts:check /tests/smoke.py --all-formats --all-voices
+      - name: Show service logs
+        if: failure()
+        run: docker logs edge-tts-smoke
+      - name: Stop smoke server
+        if: always()
+        run: docker stop edge-tts-smoke
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata (tags, labels) for Docker
+      - name: Extract image metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6.2.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
-            type=raw,value=v${{ github.run_number }},enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+            type=ref,event=tag
+            type=match,pattern=v(.*),group=1
             type=sha,prefix=sha-
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - name: Publish verified image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v7.4.0
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            INSTALL_FFMPEG=true
+          build-args: INSTALL_FFMPEG=true
+          cache-from: type=gha
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Publish GitHub release
+        uses: actions/github-script@v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const tag = context.ref.replace('refs/tags/', '');
+            try {
+              await github.rest.repos.getReleaseByTag({ ...context.repo, tag });
+              core.info(`Release ${tag} already exists.`);
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.repos.createRelease({
+                ...context.repo,
+                tag_name: tag,
+                name: tag,
+                body: fs.readFileSync('RELEASE_NOTES.md', 'utf8'),
+                draft: false,
+                prerelease: false
+              });
+            }

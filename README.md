@@ -1,5 +1,40 @@
 # OpenAI-Compatible Edge-TTS
 
+## v1.2
+
+Use this repository's release image:
+
+```bash
+docker pull ghcr.io/alienvsrobot/edge_tts:v1.2
+docker run -d -p 5050:5050 --env-file .env ghcr.io/alienvsrobot/edge_tts:v1.2
+```
+
+This image includes FFmpeg and supports MP3, Opus, AAC, FLAC, WAV, and PCM. Existing speech endpoints, voice aliases, MIME types, and SSE event shapes are preserved. SSE streams MP3 only. See [release notes](RELEASE_NOTES.md).
+
+The server uses eight worker threads for parallel requests. Optional environment settings:
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `TTS_WORKERS` | `8` | Parallel request workers, from 1 to 64 |
+| `TTS_REQUEST_TIMEOUT` | `120` | Total upstream request deadline in seconds |
+| `TTS_MAX_RETRIES` | `2` | Retries before the first audio chunk, from 0 to 5 |
+
+`GET /health` checks the local server without calling Microsoft. Invalid speech requests return 400; oversized requests return 413; upstream failures return 502; upstream timeouts return 504. Streaming failures use the existing SSE error event. Never retry a partially received SSE stream automatically: that can repeat speech.
+
+Dependency update PRs run automatically: daily for Python packages and weekly for Docker and GitHub Actions. CI runs Windows/Linux regression tests and real Docker speech checks before publishing. A daily CI run checks for upstream service changes. Dependency updates still need review; Microsoft's service can change independently.
+
+To check changes locally, install `requirements.txt` in a Python 3.12+ virtual environment, then run:
+
+```bash
+python -m unittest discover -s tests -v
+docker build --build-arg INSTALL_FFMPEG=true -t edge-tts:check .
+docker run -d --name edge-tts-smoke -p 127.0.0.1:15050:5050 -e API_KEY=release-smoke-test edge-tts:check
+python tests/smoke.py --base-url http://127.0.0.1:15050 --all-formats --all-voices
+docker stop edge-tts-smoke
+```
+
+The smoke check requires FFmpeg on the host for audio decoding. It uses a test-only API key and never loads `.env`. Release tags such as `v1.2` publish versioned images and a GitHub release after all checks pass. Main publishes `latest`.
+
 ## Forked from [travisvn/openai-edge-tts](https://github.com/travisvn/openai-edge-tts)
 
 This project provides a local, OpenAI-compatible text-to-speech (TTS) API using `edge-tts`. It emulates the OpenAI TTS endpoint (`/v1/audio/speech`), enabling users to generate speech from text with various voice options and playback speeds, just like the OpenAI API.
@@ -22,7 +57,7 @@ This project provides a local, OpenAI-compatible text-to-speech (TTS) API using 
 The simplest way to get started without having to configure anything is to run the command below
 
 ```bash
-docker run -d -p 5050:5050 travisvn/openai-edge-tts:latest
+docker run -d -p 5050:5050 ghcr.io/alienvsrobot/edge_tts:v1.2
 ```
 
 This will run the service at port 5050 with all the default configs
@@ -42,8 +77,8 @@ _(Docker required, obviously)_
 1. **Clone the Repository**:
 
 ```bash
-git clone https://github.com/travisvn/openai-edge-tts.git
-cd openai-edge-tts
+git clone https://github.com/ALIENvsROBOT/edge_tts.git
+cd edge_tts
 ```
 
 2. **Environment Variables**: Create a `.env` file in the root directory with the following variables:
@@ -109,7 +144,7 @@ This is controlled by the `INSTALL_FFMPEG_ARG` build argument. Set this environm
 This is for local builds. For pre-built Docker Hub images, add the `latest-ffmpeg` tag to the version
 
 ```bash
-docker run -d -p 5050:5050 -e API_KEY=your_api_key_here -e PORT=5050 travisvn/openai-edge-tts:latest-ffmpeg
+docker run -d -p 5050:5050 -e API_KEY=your_api_key_here -e PORT=5050 ghcr.io/alienvsrobot/edge_tts:v1.2
 ```
 
 ---
@@ -143,8 +178,8 @@ If you prefer to run this project directly with Python, follow these steps to se
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/travisvn/openai-edge-tts.git
-cd openai-edge-tts
+git clone https://github.com/ALIENvsROBOT/edge_tts.git
+cd edge_tts
 ```
 
 ### 2. Set Up a Virtual Environment
@@ -531,7 +566,7 @@ Below, you can see a screenshot of the correct configuration for using this proj
 - The quickest way to get this up and running is to install docker and run the command below:
 
 ```bash
-docker run -d -p 5050:5050 -e API_KEY=your_api_key_here -e PORT=5050 travisvn/openai-edge-tts:latest
+docker run -d -p 5050:5050 -e API_KEY=your_api_key_here -e PORT=5050 ghcr.io/alienvsrobot/edge_tts:v1.2
 ```
 
 ---
